@@ -39,11 +39,18 @@
               (copy# :leiningen/skipped-test :test))))))
 
 (defn- form-for-select-namespaces [namespaces selectors]
-  `(reduce (fn [acc# [f# args#]]
-             (if (vector? f#)
-               (filter #(apply (first f#) % args#) acc#)
-               acc#))
-           '~namespaces ~selectors))
+  (let [quoted-namespaces-with-metadata
+        (mapv (fn [ns-sym]
+                (if-let [m (meta ns-sym)]
+                  `(with-meta '~ns-sym '~m)
+                  `(quote ~ns-sym)))
+              namespaces)]
+    `(reduce (fn [acc# [f# args#]]
+               (if (vector? f#)
+                 (filter #(apply (first f#) % args#) acc#)
+                 acc#))
+             ~quoted-namespaces-with-metadata
+             ~selectors)))
 
 (defn- form-for-nses-selectors-match [selectors ns-sym]
   `(distinct
